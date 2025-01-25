@@ -13,37 +13,53 @@ jobs:
       - name: Checkout GitHub repository
         uses: actions/checkout@v3
         with:
-          persist-credentials: true # Use default GitHub token
+          persist-credentials: true
           fetch-depth: 0 # Fetch all history for accurate syncing
+
+      - name: List all files in the GitHub repository after checkout
+        run: |
+          echo "Listing all files in the GitHub repository after checkout:"
+          ls -la
 
       - name: Debug Bitbucket credentials
         run: |
           echo "BITBUCKET_USERNAME: $BITBUCKET_USERNAME"
           echo "BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD"
 
-      - name: Add Bitbucket remote
+      - name: Add Bitbucket remote with git credential helper
         env:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
-          set -e
-          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/solavisetech-migration/aws-etl-tf-python-project.git
+          # Set up Git credential helper to securely store credentials
+          git config --global credential.helper store
+          echo "https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org" > ~/.git-credentials
+          
+          # Add Bitbucket remote and fetch the latest changes
+          git remote add bitbucket https://bitbucket.org/solavisetech-migration/aws-etl-tf-python-project.git
           git fetch bitbucket
 
-      - name: Check remotes and branches
+      - name: List all files after fetching Bitbucket changes
         run: |
-          git remote -v
-          git branch -a
-          git log --oneline -n 5
+          echo "Listing all files after fetching Bitbucket changes:"
+          ls -la
 
       - name: Merge Bitbucket changes
         run: |
+          echo "Merging Bitbucket changes into GitHub repository..."
           git merge bitbucket/main --allow-unrelated-histories --no-edit || echo "No changes to merge"
 
+      - name: List all files after merge
+        run: |
+          echo "Listing all files after merge:"
+          ls -la
+
       - name: Push changes to GitHub
-        run: git push origin main
+        run: |
+          echo "Pushing changes to GitHub..."
+          git push origin main
 
       - name: Clean up
         run: |
-          git remote -v
+          echo "Cleaning up..."
           git remote remove bitbucket
