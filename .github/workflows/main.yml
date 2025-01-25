@@ -16,13 +16,25 @@ jobs:
           persist-credentials: true # Use default GitHub token
           fetch-depth: 0 # Fetch all history for accurate syncing
 
+      - name: Debug Bitbucket credentials
+        run: |
+          echo "BITBUCKET_USERNAME: $BITBUCKET_USERNAME"
+          echo "BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD"
+
       - name: Add Bitbucket remote
         env:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
+          set -e
           git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/solavisetech-migration/aws-etl-tf-python-project.git
           git fetch bitbucket
+
+      - name: Check remotes and branches
+        run: |
+          git remote -v
+          git branch -a
+          git log --oneline -n 5
 
       - name: Merge Bitbucket changes
         run: |
@@ -32,4 +44,6 @@ jobs:
         run: git push origin main
 
       - name: Clean up
-        run: git remote remove bitbucket
+        run: |
+          git remote -v
+          git remote remove bitbucket
