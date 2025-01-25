@@ -2,64 +2,52 @@ name: Sync from Bitbucket
 
 on:
   schedule:
-    - cron: '0 * * * *' # Sync every hour
-  workflow_dispatch: # Allow manual trigger
+    - cron: '0 * * * *'  # Sync every hour
+  workflow_dispatch:  # Allow manual trigger
 
 jobs:
   sync:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the GitHub repository
       - name: Checkout GitHub repository
         uses: actions/checkout@v3
         with:
-          persist-credentials: true
-          fetch-depth: 0 # Fetch all history for accurate syncing
+          persist-credentials: true  # Use default GitHub token
+          fetch-depth: 0  # Fetch all history for accurate syncing
 
-      - name: List all files in the GitHub repository after checkout
-        run: |
-          echo "Listing all files in the GitHub repository after checkout:"
-          ls -la
-
-      - name: Debug Bitbucket credentials
-        run: |
-          echo "BITBUCKET_USERNAME: $BITBUCKET_USERNAME"
-          echo "BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD"
-
+      # Step 2: Add Bitbucket remote with Git credential helper
       - name: Add Bitbucket remote with git credential helper
         env:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
-          # Set up Git credential helper to securely store credentials
+          # Store Bitbucket credentials using Git credential helper
           git config --global credential.helper store
           echo "https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org" > ~/.git-credentials
-          
-          # Add Bitbucket remote and fetch the latest changes
           git remote add bitbucket https://bitbucket.org/solavisetech-migration/aws-etl-tf-python-project.git
           git fetch bitbucket
 
-      - name: List all files after fetching Bitbucket changes
-        run: |
-          echo "Listing all files after fetching Bitbucket changes:"
-          ls -la
-
+      # Step 3: Merge Bitbucket changes into GitHub
       - name: Merge Bitbucket changes
         run: |
-          echo "Merging Bitbucket changes into GitHub repository..."
           git merge bitbucket/main --allow-unrelated-histories --no-edit || echo "No changes to merge"
 
-      - name: List all files after merge
+      # Step 4: Configure GitHub credentials for pushing changes
+      - name: Set up GitHub credentials
         run: |
-          echo "Listing all files after merge:"
-          ls -la
+          git config --global user.email "alongemiracle333@gmail.com"
+          git config --global user.name "etaoko333"
 
-      - name: Push changes to GitHub
+      # Step 5: Push changes to GitHub repository using a Personal Access Token (PAT)
+      - name: Push changes to GitHub using Personal Access Token
+        env:
+          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
         run: |
-          echo "Pushing changes to GitHub..."
-          git push origin main
+          git remote set-url origin https://github.com/etaoko333/bitbucket-project.git
+          git push https://$GH_PERSONAL_ACCESS_TOKEN@github.com/etaoko333/bitbucket-project.git
 
-      - name: Clean up
-        run: |
-          echo "Cleaning up..."
-          git remote remove bitbucket
+      # Step 6: Clean up the Bitbucket remote
+      - name: Clean up Bitbucket remote
+        run: git remote remove bitbucket
