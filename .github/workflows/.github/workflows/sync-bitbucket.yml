@@ -1,0 +1,35 @@
+name: Sync from Bitbucket
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Sync every hour
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout GitHub repository
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: true # Use default GitHub token
+          fetch-depth: 0 # Fetch all history for accurate syncing
+
+      - name: Add Bitbucket remote
+        env:
+          BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
+          BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
+        run: |
+          git remote add bitbucket https://$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD@bitbucket.org/solavisetech-migration/aws-etl-tf-python-project.git
+          git fetch bitbucket
+
+      - name: Merge Bitbucket changes
+        run: |
+          git merge bitbucket/main --allow-unrelated-histories --no-edit || echo "No changes to merge"
+
+      - name: Push changes to GitHub
+        run: git push origin main
+
+      - name: Clean up
+        run: git remote remove bitbucket
